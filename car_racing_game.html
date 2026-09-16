@@ -1,0 +1,1970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>3D Car Racing</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #0a0a12; font-family: 'Segoe UI', Arial, sans-serif; }
+  canvas { display: block; }
+
+  #hud {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    color: #fff;
+    z-index: 10;
+    user-select: none;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  }
+  #hud .stat { font-size: 14px; opacity: 0.75; letter-spacing: 1px; text-transform: uppercase; }
+  #hud .value { font-size: 34px; font-weight: 700; margin-bottom: 10px; }
+  #speedWrap { display: flex; align-items: baseline; gap: 6px; }
+  #speedUnit { font-size: 14px; opacity: 0.7; }
+
+  #coins {
+    position: fixed;
+    top: 90px;
+    left: 16px;
+    color: #ffe066;
+    font-size: 18px;
+    font-weight: 700;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #score {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    color: #ffd54a;
+    font-size: 28px;
+    font-weight: 700;
+    text-align: right;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    z-index: 10;
+  }
+  #rankLine {
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  #rankName { color: #7ee8ff; }
+  #multiplier { color: #ff9f4a; }
+  #resetRankBtn {
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffffcc;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 10px;
+    padding: 2px 8px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  #resetRankBtn:hover { background: rgba(255,255,255,0.22); }
+
+  #rankUpToast {
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    color: #fff;
+    font-size: 42px;
+    font-weight: 800;
+    text-align: center;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    z-index: 30;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  #rankUpToast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  #rankUpToast .sub {
+    font-size: 18px;
+    font-weight: 500;
+    opacity: 0.85;
+    margin-top: 6px;
+  }
+
+  #centerMsg {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #fff;
+    z-index: 20;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+  }
+  #centerMsg h1 { font-size: 48px; margin: 0 0 10px; letter-spacing: 2px; }
+  #centerMsg p { font-size: 18px; opacity: 0.85; margin: 6px 0; }
+  #centerMsg .startBtn {
+    margin-top: 18px;
+    display: inline-block;
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #ff5f6d, #ffc371);
+    border-radius: 30px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #111;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(255,95,109,0.4);
+    transition: transform 0.15s ease;
+  }
+  .startBtn:hover { transform: scale(1.05); }
+
+  #controlsHint {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    opacity: 0.6;
+    font-size: 13px;
+    z-index: 10;
+    text-align: center;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  }
+
+  .startBtn.secondary {
+    background: linear-gradient(135deg, #4a7dff, #7ee8ff);
+    box-shadow: 0 6px 20px rgba(74,125,255,0.35);
+  }
+
+  #topButtons {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 15;
+    display: none;
+    gap: 10px;
+  }
+  #shopBtn, #leaderboardBtn {
+    background: linear-gradient(135deg, #ffd54a, #ff9f4a);
+    color: #1a1a1a;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 8px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(255,159,74,0.4);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  #leaderboardBtn {
+    background: linear-gradient(135deg, #7ee8ff, #4a7dff);
+    box-shadow: 0 4px 14px rgba(74,125,255,0.4);
+    color: #08202a;
+  }
+  #shopBtn:hover, #leaderboardBtn:hover { transform: scale(1.05); }
+
+  #authPanel { margin: 16px 0 6px; }
+  .authTabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    justify-content: center;
+  }
+  .authTab {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    opacity: 0.6;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 16px;
+    border-radius: 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .authTab.active { opacity: 1; border-color: #7ee8ff; background: rgba(126,232,255,0.15); }
+  .authInput {
+    display: block;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 15px;
+    padding: 8px 14px;
+    text-align: center;
+    width: 220px;
+    outline: none;
+    margin: 0 auto 8px;
+  }
+  .authInput:focus { border-color: #7ee8ff; }
+  .authSecurityNote {
+    font-size: 11px;
+    opacity: 0.45;
+    margin-top: 10px;
+    max-width: 260px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .loggedInLine {
+    font-size: 14px;
+    margin-top: 4px;
+    opacity: 0.85;
+  }
+  .loggedInLine strong { color: #7ee8ff; }
+  .logoutLink {
+    color: #ff9f9f;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 8px;
+  }
+  .nameError {
+    color: #ff5f6d;
+    font-size: 12px;
+    margin-top: 6px;
+    min-height: 14px;
+  }
+  .authDivider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0;
+    color: rgba(255,255,255,0.4);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .authDivider::before, .authDivider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.15);
+  }
+
+  #leaderboardOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5,5,15,0.88);
+    z-index: 40;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  #leaderboardPanel {
+    background: #14141f;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    width: min(480px, 100%);
+    max-height: 86vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-sizing: border-box;
+    color: #fff;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  #leaderboardPanel h2 { margin: 0 0 4px; font-size: 26px; letter-spacing: 1px; }
+  #leaderboardPanel .lbNote { font-size: 12px; opacity: 0.55; margin-bottom: 16px; }
+  #leaderboardList { display: flex; flex-direction: column; gap: 8px; }
+  .lbRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .lbRow .lbRank { font-weight: 800; font-size: 15px; width: 26px; color: #ffd54a; flex-shrink: 0; }
+  .lbRow.top1 .lbRank { color: #ffd54a; }
+  .lbRow.top2 .lbRank { color: #d9d9d9; }
+  .lbRow.top3 .lbRank { color: #cd7f32; }
+  .lbRow .lbName { flex: 1; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lbRow .lbScore { font-weight: 700; font-size: 14px; color: #ffe066; }
+  #leaderboardStatus { text-align: center; opacity: 0.6; font-size: 13px; padding: 20px 0; }
+  #closeLeaderboardBtn { margin-top: 20px; width: 100%; }
+  #resetLeaderboardBtn {
+    margin-top: 10px;
+    width: 100%;
+    background: rgba(255,95,109,0.15);
+    border: 1px solid rgba(255,95,109,0.4);
+    color: #ff9f9f;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 0;
+    border-radius: 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+  }
+  #resetLeaderboardBtn:hover { background: rgba(255,95,109,0.25); }
+  #resetLeaderboardBtn.confirming { background: rgba(255,95,109,0.35); color: #fff; }
+
+  #shopOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5,5,15,0.88);
+    z-index: 40;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  #shopPanel {
+    background: #14141f;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    width: min(720px, 100%);
+    max-height: 86vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-sizing: border-box;
+    color: #fff;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  #shopPanel h2 {
+    margin: 0 0 4px;
+    font-size: 26px;
+    letter-spacing: 1px;
+  }
+  #shopPanel .shopCoins {
+    color: #ffe066;
+    font-weight: 700;
+    margin-bottom: 18px;
+    font-size: 15px;
+  }
+  #rebirthSection {
+    background: rgba(155,89,255,0.1);
+    border: 1px solid rgba(155,89,255,0.35);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+  #rebirthInfo {
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+  #rebirthInfo strong { color: #c299ff; }
+  #rebirthError {
+    color: #ff9f9f;
+    font-size: 12px;
+    min-height: 14px;
+    margin-bottom: 6px;
+  }
+  #rebirthBtn { width: 100%; }
+  #rebirthBtn:disabled, #rebirthBtn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  #shopPanel h3 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.6;
+    margin: 22px 0 10px;
+  }
+  .shopGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .shopItem {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .shopItem.equipped { border-color: #7ee8ff; box-shadow: 0 0 0 1px #7ee8ff inset; }
+  .shopItem .swatch {
+    width: 100%;
+    height: 36px;
+    border-radius: 8px;
+  }
+  .shopItem .itemName { font-size: 14px; font-weight: 700; }
+  .shopItem .itemStats { font-size: 11px; opacity: 0.7; line-height: 1.4; }
+  .shopItem button {
+    margin-top: 4px;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 0;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .shopItem .buyBtn { background: #ffd54a; color: #1a1a1a; }
+  .shopItem .buyBtn:disabled { background: #444; color: #888; cursor: not-allowed; }
+  .shopItem .equipBtn { background: #7ee8ff; color: #08202a; }
+  .shopItem .equippedLabel {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #7ee8ff;
+    padding: 6px 0;
+  }
+  #closeShopBtn {
+    margin-top: 22px;
+    width: 100%;
+  }
+
+  #mobileControls {
+    position: fixed;
+    bottom: 24px;
+    width: 100%;
+    display: none;
+    justify-content: space-between;
+    padding: 0 24px;
+    box-sizing: border-box;
+    z-index: 15;
+  }
+  .padBtn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.35);
+    color: #fff;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: none;
+  }
+  #leftRight { display: flex; gap: 16px; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="stat">Speed</div>
+  <div id="speedWrap"><div id="speedVal" class="value">0</div><div id="speedUnit">km/h</div></div>
+</div>
+<div id="coins">🪙 <span id="coinsVal">0</span> coins</div>
+<div id="score">Score: <span id="scoreVal">0</span>
+  <div id="rankLine"><span id="rankName">Rookie</span> · <span id="multiplier">x1.0</span> <span id="resetRankBtn">Reset Rank</span></div>
+</div>
+<div id="rankUpToast"></div>
+
+<div id="centerMsg">
+  <h1>🏎️ NEON DRIFT</h1>
+  <p>Dodge traffic. Survive as long as you can.</p>
+  <p>Arrow keys / A,D to steer &nbsp;•&nbsp; Up/W to accelerate &nbsp;•&nbsp; Down/S to brake</p>
+  <div id="authOrReady"></div>
+</div>
+
+<div id="topButtons">
+  <div id="shopBtn">🛒 Shop</div>
+  <div id="leaderboardBtn">🏆 Leaderboard</div>
+</div>
+
+<div id="shopOverlay">
+  <div id="shopPanel">
+    <h2>🛒 Garage &amp; Road Shop</h2>
+    <div class="shopCoins">🪙 <span id="shopCoinsVal">0</span> coins available</div>
+    <h3>Rebirth</h3>
+    <div id="rebirthSection">
+      <div id="rebirthInfo"></div>
+      <div id="rebirthError"></div>
+      <div class="startBtn secondary" id="rebirthBtn">🔁 REBIRTH</div>
+    </div>
+    <h3>Cars</h3>
+    <div class="shopGrid" id="carGrid"></div>
+    <h3>Roads</h3>
+    <div class="shopGrid" id="roadGrid"></div>
+    <div class="startBtn" id="closeShopBtn">CLOSE</div>
+  </div>
+</div>
+
+<div id="leaderboardOverlay">
+  <div id="leaderboardPanel">
+    <h2>🏆 Global Leaderboard</h2>
+    <div class="authTabs">
+      <button class="authTab active" id="lbTabScore" type="button">🏆 High Scores</button>
+      <button class="authTab" id="lbTabTime" type="button">⏱️ Time Played</button>
+      <button class="authTab" id="lbTabRebirth" type="button">🔁 Rebirths</button>
+    </div>
+    <div class="lbNote" id="lbNoteText">Top 3 all-time high scores by account. Only your best run counts — your username and best score are visible to everyone.</div>
+    <div id="leaderboardList"></div>
+    <div id="leaderboardStatus">Loading...</div>
+    <div class="startBtn" id="closeLeaderboardBtn">CLOSE</div>
+    <div id="resetLeaderboardBtn">⚠️ Reset All Leaderboards</div>
+  </div>
+</div>
+
+<div id="controlsHint">← → steer &nbsp; ↑ gas &nbsp; ↓ brake</div>
+
+
+<div id="mobileControls">
+  <div id="leftRight">
+    <div class="padBtn" id="btnLeft">◀</div>
+    <div class="padBtn" id="btnRight">▶</div>
+  </div>
+  <div class="padBtn" id="btnGas">▲</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+(function() {
+  // ---------- Basic scene setup ----------
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a18);
+  scene.fog = new THREE.Fog(0x0a0a18, 30, 140);
+
+  const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  document.body.appendChild(renderer.domElement);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ---------- Lights ----------
+  const ambient = new THREE.AmbientLight(0x9999ff, 0.55);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  dirLight.position.set(-20, 40, -10);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(1024, 1024);
+  dirLight.shadow.camera.left = -40;
+  dirLight.shadow.camera.right = 40;
+  dirLight.shadow.camera.top = 40;
+  dirLight.shadow.camera.bottom = -40;
+  scene.add(dirLight);
+
+  // ---------- Road setup ----------
+  const ROAD_WIDTH = 16;
+  const LANE_COUNT = 4;
+  const LANE_WIDTH = ROAD_WIDTH / LANE_COUNT;
+  const SEGMENT_LENGTH = 40;
+  const SEGMENT_COUNT = 8;
+
+  const roadGroup = new THREE.Group();
+  scene.add(roadGroup);
+
+  const roadSegments = [];
+  const roadMat = new THREE.MeshLambertMaterial({ color: 0x2b2b35 });
+  const grassMat = new THREE.MeshLambertMaterial({ color: 0x123a1f });
+  const barrierMat = new THREE.MeshLambertMaterial({ color: 0xff3366, emissive: 0x330011 });
+  const stripeMat = new THREE.MeshBasicMaterial({ color: 0xffe066 });
+
+  function createRoadSegment(zPos) {
+    const group = new THREE.Group();
+
+    const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, SEGMENT_LENGTH);
+    const road = new THREE.Mesh(roadGeo, roadMat);
+    road.rotation.x = -Math.PI / 2;
+    road.receiveShadow = true;
+    group.add(road);
+
+    // lane dashes
+    for (let i = 1; i < LANE_COUNT; i++) {
+      const x = -ROAD_WIDTH/2 + i * LANE_WIDTH;
+      for (let d = -SEGMENT_LENGTH/2 + 2; d < SEGMENT_LENGTH/2; d += 8) {
+        const dashGeo = new THREE.PlaneGeometry(0.2, 3);
+        const dash = new THREE.Mesh(dashGeo, stripeMat);
+        dash.rotation.x = -Math.PI / 2;
+        dash.position.set(x, 0.01, d);
+        group.add(dash);
+      }
+    }
+
+    // side ground strips (grass) — shared material so road themes retint every segment at once
+    const grassGeo = new THREE.PlaneGeometry(40, SEGMENT_LENGTH);
+    const grassL = new THREE.Mesh(grassGeo, grassMat);
+    grassL.rotation.x = -Math.PI / 2;
+    grassL.position.set(-ROAD_WIDTH/2 - 20, -0.01, 0);
+    grassL.receiveShadow = true;
+    group.add(grassL);
+    const grassR = grassL.clone();
+    grassR.position.x = ROAD_WIDTH/2 + 20;
+    group.add(grassR);
+
+    // side barriers with glow markers — shared material so road themes retint every segment at once
+    const barrierGeo = new THREE.BoxGeometry(0.5, 1, SEGMENT_LENGTH);
+    const barrierL = new THREE.Mesh(barrierGeo, barrierMat);
+    barrierL.position.set(-ROAD_WIDTH/2 - 0.4, 0.5, 0);
+    barrierL.castShadow = true;
+    group.add(barrierL);
+    const barrierR = barrierL.clone();
+    barrierR.position.x = ROAD_WIDTH/2 + 0.4;
+    group.add(barrierR);
+
+    group.position.z = zPos;
+    roadGroup.add(group);
+    return group;
+  }
+
+  for (let i = 0; i < SEGMENT_COUNT; i++) {
+    roadSegments.push(createRoadSegment(-i * SEGMENT_LENGTH));
+  }
+
+  // ---------- Player car ----------
+  function buildCar(bodyColor) {
+    const car = new THREE.Group();
+
+    const bodyGeo = new THREE.BoxGeometry(1.8, 0.5, 3.6);
+    const bodyMat = new THREE.MeshLambertMaterial({ color: bodyColor });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 0.5;
+    body.castShadow = true;
+    car.add(body);
+    car.userData.bodyMesh = body; // exposed so the shop can recolor this car on purchase/equip
+
+    const cabinGeo = new THREE.BoxGeometry(1.3, 0.45, 1.6);
+    const cabinMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+    cabin.position.set(0, 0.95, -0.2);
+    cabin.castShadow = true;
+    car.add(cabin);
+
+    const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 12);
+    const wheelMat = new THREE.MeshLambertMaterial({ color: 0x0a0a0a });
+    const wheelPositions = [
+      [-0.9, 0.35, 1.1], [0.9, 0.35, 1.1],
+      [-0.9, 0.35, -1.1], [0.9, 0.35, -1.1]
+    ];
+    wheelPositions.forEach(p => {
+      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(p[0], p[1], p[2]);
+      wheel.castShadow = true;
+      car.add(wheel);
+    });
+
+    // tail lights
+    const lightGeo = new THREE.BoxGeometry(0.3, 0.15, 0.05);
+    const lightMat = new THREE.MeshBasicMaterial({ color: 0xff2222 });
+    const lightL = new THREE.Mesh(lightGeo, lightMat);
+    lightL.position.set(-0.6, 0.55, 1.81);
+    car.add(lightL);
+    const lightR = lightL.clone();
+    lightR.position.x = 0.6;
+    car.add(lightR);
+
+    // turn-signal indicators (amber, hidden by default; blinked on by lane-change logic)
+    const indicatorGeo = new THREE.BoxGeometry(0.18, 0.14, 0.1);
+    const indicatorMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+    const indicatorL = new THREE.Mesh(indicatorGeo, indicatorMat);
+    indicatorL.position.set(-0.95, 0.55, -1.75);
+    indicatorL.visible = false;
+    car.add(indicatorL);
+    const indicatorR = indicatorL.clone();
+    indicatorR.material = indicatorMat.clone();
+    indicatorR.position.x = 0.95;
+    indicatorR.visible = false;
+    car.add(indicatorR);
+    car.userData.indicatorL = indicatorL;
+    car.userData.indicatorR = indicatorR;
+
+    return car;
+  }
+
+  const playerCar = buildCar(0x2288ff);
+  playerCar.position.set(0, 0, 5);
+  scene.add(playerCar);
+
+  // ---------- Camera rig ----------
+  camera.position.set(0, 5, 10);
+
+  // ---------- Traffic ----------
+  const trafficColors = [0xff5555, 0xffaa33, 0x55ff88, 0xaa55ff, 0xffffff];
+  const trafficCars = [];
+
+  function laneX(laneIndex) {
+    // lanes centered
+    return -ROAD_WIDTH/2 + LANE_WIDTH/2 + laneIndex * LANE_WIDTH;
+  }
+
+  function randomTrafficSpeed() {
+    // Most traffic cruises normally; a portion drives fast enough to overtake the player.
+    return Math.random() < 0.3
+      ? 0.45 + Math.random() * 0.25   // fast — can overtake
+      : 0.12 + Math.random() * 0.18;  // normal traffic pace
+  }
+
+  function spawnTrafficCar(zPos) {
+    const color = trafficColors[Math.floor(Math.random() * trafficColors.length)];
+    const car = buildCar(color);
+    const lane = Math.floor(Math.random() * LANE_COUNT);
+    car.position.set(laneX(lane), 0, zPos !== undefined ? zPos : -Math.random() * 200 - 60);
+    car.userData.lane = lane;
+    car.userData.targetLane = lane;
+    car.userData.speed = randomTrafficSpeed();
+    car.userData.laneChangeTimer = 90 + Math.floor(Math.random() * 180); // frames until next lane change
+    scene.add(car);
+    trafficCars.push(car);
+  }
+
+  for (let i = 0; i < 8; i++) {
+    spawnTrafficCar(-40 - i * 30);
+  }
+
+  // ---------- Game state ----------
+  let running = false;
+  let frameCount = 0; // drives blink timing for lane-change turn signals
+  let raceElapsedFrames = 0; // counts frames this race has been actively running, for total-time-played tracking
+  let gameOver = false;
+  let speed = 0;
+  const MAX_SPEED = 1.15;
+  const SPEED_DISPLAY_SCALE = 500 / MAX_SPEED; // top speed now reads as 500 km/h
+  const ACCEL = 0.012;
+  const BRAKE = 0.03;
+  const FRICTION = 0.006;
+  let playerX = 0;
+  const STEER_SPEED = 0.12;
+  let score = 0;
+  let totalDistance = 0;
+  let distanceForSpawn = 0;
+
+  // The first rank-up costs 250 points, the second costs 500, the third
+  // 750, and so on — each rank-up costs 250 more than the last — UNTIL it
+  // reaches 1,000,000 points per rank-up, at which point it stops growing
+  // and stays flat at 1,000,000 forever. The multiplier itself is also
+  // capped at 1,000,000x, so it can't grow forever either.
+  const RANK_POINTS_STEP = 250;
+  const RANK_COST_CAP = 1000000; // rank-up cost stops increasing once it hits this
+  const MAX_MULTIPLIER = 1000000;
+  const RANK_NAMES = ['Rookie', 'Racer', 'Pro', 'Veteran', 'Elite', 'Champion', 'Legend', 'Mythic'];
+
+  // The rank-transition index (1-based) at which the escalating cost first
+  // reaches RANK_COST_CAP — every transition at or beyond this index costs
+  // exactly RANK_COST_CAP, no more.
+  const RANK_COST_CAP_INDEX = Math.floor(RANK_COST_CAP / RANK_POINTS_STEP);
+
+  // Points required to go from rank r to rank r+1.
+  function pointsForNextRank(r) {
+    return Math.min(RANK_COST_CAP, RANK_POINTS_STEP * (r + 1));
+  }
+  // Sum of consecutive rank-transition indices j=jStart..jStart+count-1,
+  // each still below the cap (i.e. plain arithmetic-sequence costs).
+  function sumUncappedRange(jStart, count) {
+    if (count <= 0) return 0;
+    const sumJ = count * jStart + (count * (count - 1)) / 2;
+    return RANK_POINTS_STEP * sumJ;
+  }
+  // Total points needed to climb k ranks starting from rank r — split into
+  // the still-increasing part (below the cap) and the flat part (at the
+  // cap), so this stays correct once the cost has capped out.
+  function pointsToClimb(r, k) {
+    if (k <= 0) return 0;
+    const jStart = r + 1;
+    if (jStart > RANK_COST_CAP_INDEX) return k * RANK_COST_CAP; // fully flat already
+    const nUncapped = Math.min(k, RANK_COST_CAP_INDEX - jStart + 1);
+    const uncappedSum = sumUncappedRange(jStart, nUncapped);
+    const flatSteps = k - nUncapped;
+    return uncappedSum + flatSteps * RANK_COST_CAP;
+  }
+  // Solves for the number of ranks gained from a pool of points, in O(1) via
+  // the quadratic formula (for the increasing part) plus simple division
+  // (for the flat part), with tiny correction loops for float error. This
+  // stays fast even for a huge point burst, capped or not.
+  function computeRankGain(r, pointsAvailable) {
+    const jStart = r + 1;
+
+    if (jStart > RANK_COST_CAP_INDEX) {
+      // Already past the cap — every further rank costs exactly RANK_COST_CAP.
+      let k = Math.floor(pointsAvailable / RANK_COST_CAP);
+      if (!Number.isFinite(k) || k < 0) k = 0;
+      while (k > 0 && pointsToClimb(r, k) > pointsAvailable) k--;
+      while (pointsToClimb(r, k + 1) <= pointsAvailable) k++;
+      return k;
+    }
+
+    const nUncappedMax = RANK_COST_CAP_INDEX - jStart + 1;
+    const a = RANK_POINTS_STEP / 2;
+    const b = RANK_POINTS_STEP * (jStart - 0.5);
+    const c = -pointsAvailable;
+    let kGuess = Math.floor((-b + Math.sqrt(Math.max(0, b * b - 4 * a * c))) / (2 * a));
+    if (!Number.isFinite(kGuess) || kGuess < 0) kGuess = 0;
+
+    let kUncapped = Math.min(kGuess, nUncappedMax);
+    while (kUncapped > 0 && sumUncappedRange(jStart, kUncapped) > pointsAvailable) kUncapped--;
+    while (kUncapped < nUncappedMax && sumUncappedRange(jStart, kUncapped + 1) <= pointsAvailable) kUncapped++;
+
+    if (kUncapped < nUncappedMax) return kUncapped; // ran out before hitting the cap
+
+    // Used every remaining below-cap rank — spend what's left at the flat rate.
+    const spentUncapped = sumUncappedRange(jStart, nUncappedMax);
+    const remaining = pointsAvailable - spentUncapped;
+    let kFlat = Math.floor(remaining / RANK_COST_CAP);
+    if (!Number.isFinite(kFlat) || kFlat < 0) kFlat = 0;
+    while (kFlat > 0 && kFlat * RANK_COST_CAP > remaining) kFlat--;
+    while ((kFlat + 1) * RANK_COST_CAP <= remaining) kFlat++;
+
+    return nUncappedMax + kFlat;
+  }
+
+  // Rank tier numbers and the multiplier switch to scientific notation (e.g.
+  // 1.23e6) once they pass one million, so huge values stay compact.
+  function formatCompactMillion(n) {
+    if (Math.abs(n) >= 1e6) {
+      return n.toExponential(2).replace('+', '');
+    }
+    return n.toString();
+  }
+  function formatMultiplier(m) {
+    if (Math.abs(m) >= 1e6) {
+      return m.toExponential(2).replace('+', '');
+    }
+    return m.toFixed(1);
+  }
+
+  function rankNameFor(index) {
+    if (index < RANK_NAMES.length) return RANK_NAMES[index];
+    const base = RANK_NAMES[RANK_NAMES.length - 1];
+    const tier = index - RANK_NAMES.length + 2; // Mythic 2, Mythic 3, ...
+    return `${base} ${formatCompactMillion(tier)}`;
+  }
+  function multiplierFor(index) {
+    return Math.min(MAX_MULTIPLIER, 1 + index * 0.5);
+  }
+  // Shared number formatter: plain integers below a billion, scientific
+  // notation (e.g. 1.23e9) once a value crosses the billion mark — used
+  // for score, coins, and anything else that could grow unbounded.
+  function formatNumber(n) {
+    n = Math.floor(n);
+    if (Math.abs(n) >= 1e9) {
+      return n.toExponential(2).replace('+', '');
+    }
+    return n.toString();
+  }
+  let rankIndex = 0;       // persists across deaths — never reset by resetGame()
+  let pointsSinceRank = 0; // progress toward the next rank, resets each race
+  let totalCoins = 0;      // persists across deaths — earned at a 10:1 score-to-coin ratio
+
+  // ---------- Shop: cars & roads that boost points/coins ----------
+  const CARS = [
+    { id: 'blue',        name: 'Blue Bolt',        color: 0x2288ff, cost: 0,        pointsMult: 1.0,  coinMult: 1.0 },
+    { id: 'red',         name: 'Crimson Racer',    color: 0xff3355, cost: 300,      pointsMult: 1.15, coinMult: 1.0 },
+    { id: 'gold',        name: 'Gold Rush',        color: 0xffcc33, cost: 800,      pointsMult: 1.3,  coinMult: 1.15 },
+    { id: 'purple',      name: 'Violet Phantom',   color: 0x9b59ff, cost: 1500,     pointsMult: 1.5,  coinMult: 1.3 },
+    { id: 'chrome',      name: 'Chrome Legend',    color: 0xf5f5f5, cost: 3000,     pointsMult: 1.8,  coinMult: 1.6 },
+    { id: 'emerald',     name: 'Emerald Streak',   color: 0x2ecc71, cost: 6000,     pointsMult: 2.1,  coinMult: 1.9 },
+    { id: 'obsidian',    name: 'Obsidian Fury',    color: 0x1a1a1a, cost: 10000,    pointsMult: 2.5,  coinMult: 2.2 },
+    { id: 'plasma',      name: 'Plasma Vortex',    color: 0xff00ff, cost: 20000,    pointsMult: 3.0,  coinMult: 2.6 },
+    { id: 'inferno',     name: 'Inferno GT',       color: 0xff4500, cost: 35000,    pointsMult: 3.5,  coinMult: 3.0 },
+    { id: 'quantum',     name: 'Quantum Edge',     color: 0x00e5ff, cost: 60000,    pointsMult: 4.2,  coinMult: 3.6 },
+    { id: 'titan',       name: 'Titan Drift',      color: 0xffffff, cost: 100000,   pointsMult: 4.8,  coinMult: 4.0 },
+    { id: 'nebula',      name: 'Nebula Streak',    color: 0x8e44ad, cost: 150000,   pointsMult: 5.4,  coinMult: 4.4 },
+    { id: 'photon',      name: 'Photon Racer',     color: 0xffff00, cost: 220000,   pointsMult: 6.0,  coinMult: 4.8 },
+    { id: 'vortex',      name: 'Vortex X',         color: 0x00ff99, cost: 320000,   pointsMult: 6.6,  coinMult: 5.2 },
+    { id: 'eclipse',     name: 'Eclipse Shadow',   color: 0x111111, cost: 460000,   pointsMult: 7.2,  coinMult: 5.6 },
+    { id: 'solaris',     name: 'Solaris Flame',    color: 0xff6600, cost: 650000,   pointsMult: 7.8,  coinMult: 6.0 },
+    { id: 'aurora',      name: 'Aurora Dream',     color: 0x66ffcc, cost: 900000,   pointsMult: 8.4,  coinMult: 6.5 },
+    { id: 'nova',        name: 'Nova Blitz',       color: 0xff3399, cost: 1250000,  pointsMult: 9.0,  coinMult: 7.0 },
+    { id: 'cosmic',      name: 'Cosmic Ray',       color: 0x3366ff, cost: 1700000,  pointsMult: 9.6,  coinMult: 7.5 },
+    { id: 'quasar',      name: 'Quasar Prime',     color: 0x9933cc, cost: 2300000,  pointsMult: 10.2, coinMult: 8.0 },
+    { id: 'singularity', name: 'Singularity',      color: 0x000000, cost: 3100000,  pointsMult: 11.0, coinMult: 8.6 },
+    { id: 'infinity',    name: 'Infinity Loop',    color: 0xffffff, cost: 4200000,  pointsMult: 11.8, coinMult: 9.2 },
+    { id: 'omega',       name: 'Omega Drive',      color: 0xcc0000, cost: 5600000,  pointsMult: 12.6, coinMult: 9.8 },
+    { id: 'zenith',      name: 'Zenith Blaze',     color: 0xffaa00, cost: 7500000,  pointsMult: 13.4, coinMult: 10.4 },
+    { id: 'ethereal',    name: 'Ethereal Ghost',   color: 0xccffff, cost: 10000000, pointsMult: 14.2, coinMult: 11.0 },
+    { id: 'apex',        name: 'Apex Predator',    color: 0x222222, cost: 13500000, pointsMult: 15.0, coinMult: 11.6 },
+    { id: 'celestial',   name: 'Celestial Wing',   color: 0xffffee, cost: 18000000, pointsMult: 16.0, coinMult: 12.4 },
+    { id: 'godspeed',    name: 'Godspeed',         color: 0xffdd00, cost: 24000000, pointsMult: 17.0, coinMult: 13.2 },
+    { id: 'voidwalker',  name: 'Voidwalker',       color: 0x330033, cost: 32000000, pointsMult: 18.0, coinMult: 14.0 },
+    { id: 'ultimate',    name: 'The Ultimate',     color: 0xffd700, cost: 42000000, pointsMult: 20.0, coinMult: 15.0 },
+    { id: 'meteorite',    name: 'Meteorite Racer',  color: 0xaa6633, cost: 70000000,        pointsMult: 21,   coinMult: 16 },
+    { id: 'plutonium',    name: 'Plutonium Beast',  color: 0x33ff33, cost: 110000000,       pointsMult: 22,   coinMult: 17 },
+    { id: 'darkmatter',   name: 'Dark Matter',      color: 0x220033, cost: 170000000,       pointsMult: 23,   coinMult: 18 },
+    { id: 'supernova',    name: 'Supernova Strike', color: 0xffee00, cost: 260000000,       pointsMult: 24.5, coinMult: 19 },
+    { id: 'wormhole',     name: 'Wormhole Runner',  color: 0x6600ff, cost: 400000000,       pointsMult: 26,   coinMult: 20 },
+    { id: 'pulsar',       name: 'Pulsar Charge',    color: 0x00ffff, cost: 600000000,       pointsMult: 27.5, coinMult: 21 },
+    { id: 'graviton',     name: 'Graviton Drive',   color: 0x888888, cost: 900000000,       pointsMult: 29,   coinMult: 22 },
+    { id: 'antimatter',   name: 'Antimatter X',     color: 0xff00aa, cost: 1350000000,      pointsMult: 31,   coinMult: 23.5 },
+    { id: 'hyperion',     name: 'Hyperion Flare',   color: 0xffaa00, cost: 2000000000,      pointsMult: 33,   coinMult: 25 },
+    { id: 'chronos',      name: 'Chronos Racer',    color: 0x00aaff, cost: 3000000000,      pointsMult: 35,   coinMult: 26.5 },
+    { id: 'olympus',      name: 'Olympus Thunder',  color: 0xffffff, cost: 4500000000,      pointsMult: 37.5, coinMult: 28 },
+    { id: 'valkyrie',     name: 'Valkyrie Wing',    color: 0xcc0033, cost: 6750000000,      pointsMult: 40,   coinMult: 30 },
+    { id: 'phoenix',      name: 'Phoenix Rebirth',  color: 0xff5500, cost: 10000000000,     pointsMult: 43,   coinMult: 32 },
+    { id: 'leviathan',    name: 'Leviathan Roar',   color: 0x003366, cost: 15000000000,     pointsMult: 46,   coinMult: 34 },
+    { id: 'behemoth',     name: 'Behemoth Crush',   color: 0x552200, cost: 22500000000,     pointsMult: 49,   coinMult: 36 },
+    { id: 'kraken',       name: 'Kraken Surge',     color: 0x004466, cost: 34000000000,     pointsMult: 52,   coinMult: 38 },
+    { id: 'dragon',       name: 'Dragon Fury',      color: 0xcc2200, cost: 50000000000,     pointsMult: 56,   coinMult: 41 },
+    { id: 'titanprime',   name: 'Titan Prime',      color: 0xdddddd, cost: 75000000000,     pointsMult: 60,   coinMult: 44 },
+    { id: 'seraph',       name: 'Seraph Wing',      color: 0xffffcc, cost: 110000000000,    pointsMult: 65,   coinMult: 47 },
+    { id: 'oblivion',     name: 'Oblivion Edge',    color: 0x000011, cost: 165000000000,    pointsMult: 70,   coinMult: 50 },
+    { id: 'paradox',      name: 'Paradox Drive',    color: 0x9900ff, cost: 250000000000,    pointsMult: 76,   coinMult: 54 },
+    { id: 'infinityx',    name: 'Infinity X',       color: 0xeeeeee, cost: 375000000000,    pointsMult: 82,   coinMult: 58 },
+    { id: 'eternity',     name: 'Eternity Racer',   color: 0xffd700, cost: 560000000000,    pointsMult: 89,   coinMult: 62 },
+    { id: 'genesis',      name: 'Genesis Spark',    color: 0x00ff88, cost: 840000000000,    pointsMult: 96,   coinMult: 67 },
+    { id: 'apocalypse',   name: 'Apocalypse Rider', color: 0x880000, cost: 1250000000000,   pointsMult: 104,  coinMult: 72 },
+    { id: 'nirvana',      name: 'Nirvana Flow',     color: 0x88ffcc, cost: 1900000000000,   pointsMult: 113,  coinMult: 78 },
+    { id: 'transcend',    name: 'Transcendence',    color: 0xffffff, cost: 2800000000000,   pointsMult: 122,  coinMult: 84 },
+    { id: 'omnipotent',   name: 'Omnipotent One',   color: 0xffd700, cost: 4200000000000,   pointsMult: 133,  coinMult: 91 },
+    { id: 'multiverse',   name: 'Multiverse Drift', color: 0x6633ff, cost: 6300000000000,   pointsMult: 144,  coinMult: 98 },
+    { id: 'absolute',     name: 'The Absolute',     color: 0xffffff, cost: 10000000000000,  pointsMult: 160,  coinMult: 108 }
+  ];
+  const ROADS = [
+    { id: 'asphalt',      name: 'Classic Asphalt',     roadColor: 0x2b2b35, grassColor: 0x123a1f, barrierColor: 0xff3366, cost: 0,        pointsMult: 1.0,  coinMult: 1.0 },
+    { id: 'sunset',       name: 'Sunset Strip',        roadColor: 0x3b2b45, grassColor: 0x5a2a3a, barrierColor: 0xffaa33, cost: 500,      pointsMult: 1.1,  coinMult: 1.1 },
+    { id: 'neon',         name: 'Neon Circuit',        roadColor: 0x14142c, grassColor: 0x0a0a2a, barrierColor: 0x00ffee, cost: 1200,     pointsMult: 1.25, coinMult: 1.2 },
+    { id: 'desert',       name: 'Desert Rally',        roadColor: 0x4a3a28, grassColor: 0x8a6a3a, barrierColor: 0xff6600, cost: 2500,     pointsMult: 1.4,  coinMult: 1.35 },
+    { id: 'ice',          name: 'Frozen Highway',      roadColor: 0x3a4a5a, grassColor: 0xc9e8f5, barrierColor: 0x66ccff, cost: 5000,     pointsMult: 1.6,  coinMult: 1.5 },
+    { id: 'lava',         name: 'Lava Run',            roadColor: 0x2a1010, grassColor: 0x661a1a, barrierColor: 0xff4400, cost: 8000,     pointsMult: 1.8,  coinMult: 1.7 },
+    { id: 'galaxy',       name: 'Galaxy Highway',      roadColor: 0x0a0a2a, grassColor: 0x1a0a3a, barrierColor: 0x9933ff, cost: 15000,    pointsMult: 2.2,  coinMult: 2.0 },
+    { id: 'golden',       name: 'Golden Expressway',   roadColor: 0x3a2a0a, grassColor: 0x5a3a0a, barrierColor: 0xffd700, cost: 30000,    pointsMult: 2.8,  coinMult: 2.5 },
+    { id: 'toxic',        name: 'Toxic Wasteland',     roadColor: 0x1a2a0a, grassColor: 0x2a4a0a, barrierColor: 0x9aff00, cost: 45000,    pointsMult: 3.2,  coinMult: 2.9 },
+    { id: 'crystal',      name: 'Crystal Skyway',      roadColor: 0x1a2a3a, grassColor: 0x0a1a2a, barrierColor: 0x00ffff, cost: 70000,    pointsMult: 3.8,  coinMult: 3.4 },
+    { id: 'volcano',      name: 'Volcano Pass',        roadColor: 0x2a0a0a, grassColor: 0x551010, barrierColor: 0xff2200, cost: 100000,   pointsMult: 4.4,  coinMult: 3.8 },
+    { id: 'tundra',       name: 'Tundra Trail',        roadColor: 0x2a3a4a, grassColor: 0xeaf5ff, barrierColor: 0x88ddff, cost: 150000,   pointsMult: 5.0,  coinMult: 4.2 },
+    { id: 'jungle',       name: 'Jungle Circuit',      roadColor: 0x0a2a1a, grassColor: 0x0a4a2a, barrierColor: 0x66ff66, cost: 220000,   pointsMult: 5.6,  coinMult: 4.6 },
+    { id: 'canyon',       name: 'Canyon Run',          roadColor: 0x4a2a1a, grassColor: 0x6a3a1a, barrierColor: 0xffaa44, cost: 320000,   pointsMult: 6.2,  coinMult: 5.0 },
+    { id: 'nightsky',     name: 'Night Sky Highway',   roadColor: 0x0a0a1a, grassColor: 0x05050f, barrierColor: 0xaaaaff, cost: 460000,   pointsMult: 6.8,  coinMult: 5.4 },
+    { id: 'coral',        name: 'Coral Reef Road',     roadColor: 0x0a2a3a, grassColor: 0x0a4a5a, barrierColor: 0xff6699, cost: 650000,   pointsMult: 7.4,  coinMult: 5.8 },
+    { id: 'storm',        name: 'Storm Chaser Route',  roadColor: 0x2a2a3a, grassColor: 0x1a1a2a, barrierColor: 0xffff00, cost: 900000,   pointsMult: 8.0,  coinMult: 6.2 },
+    { id: 'mirage',       name: 'Mirage Sands',        roadColor: 0x3a3020, grassColor: 0x5a4a2a, barrierColor: 0xffee88, cost: 1250000,  pointsMult: 8.6,  coinMult: 6.6 },
+    { id: 'obsidianroad', name: 'Obsidian Motorway',   roadColor: 0x0a0a0a, grassColor: 0x1a1a1a, barrierColor: 0x9933ff, cost: 1700000,  pointsMult: 9.2,  coinMult: 7.0 },
+    { id: 'auroraroad',   name: 'Aurora Skyline',      roadColor: 0x0a1a2a, grassColor: 0x0a2a3a, barrierColor: 0x66ffcc, cost: 2300000,  pointsMult: 9.8,  coinMult: 7.4 },
+    { id: 'meteor',       name: 'Meteor Belt',         roadColor: 0x1a0a2a, grassColor: 0x2a0a3a, barrierColor: 0xff66ff, cost: 3100000,  pointsMult: 10.6, coinMult: 8.0 },
+    { id: 'blackhole',    name: 'Black Hole Bypass',   roadColor: 0x000000, grassColor: 0x0a0a0a, barrierColor: 0x6600ff, cost: 4200000,  pointsMult: 11.4, coinMult: 8.6 },
+    { id: 'rainbow',      name: 'Rainbow Raceway',     roadColor: 0x2a1a2a, grassColor: 0x1a2a3a, barrierColor: 0xff00ff, cost: 5600000,  pointsMult: 12.2, coinMult: 9.2 },
+    { id: 'dunes',        name: 'Dune Sea Highway',    roadColor: 0x3a2a10, grassColor: 0x5a4a20, barrierColor: 0xffcc00, cost: 7500000,  pointsMult: 13.0, coinMult: 9.8 },
+    { id: 'glacier',      name: 'Glacier Pass',        roadColor: 0x1a3a4a, grassColor: 0xd0f0ff, barrierColor: 0x33ccff, cost: 10000000, pointsMult: 13.8, coinMult: 10.4 },
+    { id: 'infernoroad',  name: 'Inferno Highway',     roadColor: 0x2a0000, grassColor: 0x4a0a0a, barrierColor: 0xff3300, cost: 13500000, pointsMult: 14.8, coinMult: 11.0 },
+    { id: 'starlight',    name: 'Starlight Skyway',    roadColor: 0x0a0a2a, grassColor: 0x05051a, barrierColor: 0xffffff, cost: 18000000, pointsMult: 15.8, coinMult: 11.8 },
+    { id: 'phantom',      name: 'Phantom Zone',        roadColor: 0x100010, grassColor: 0x200020, barrierColor: 0x9900cc, cost: 24000000, pointsMult: 16.8, coinMult: 12.6 },
+    { id: 'eden',         name: 'Eden Parkway',        roadColor: 0x0a2a0a, grassColor: 0x0a4a0a, barrierColor: 0x99ff33, cost: 32000000, pointsMult: 17.8, coinMult: 13.4 },
+    { id: 'omegaroad',    name: 'Omega Speedway',      roadColor: 0x111111, grassColor: 0x222222, barrierColor: 0xffd700, cost: 42000000, pointsMult: 20.0, coinMult: 15.0 },
+    { id: 'meteorroad',     name: 'Meteor Shower Road',    roadColor: 0x3a2a1a, grassColor: 0x1a1005, barrierColor: 0xffaa66, cost: 70000000,       pointsMult: 21,   coinMult: 16 },
+    { id: 'plasmapath',     name: 'Plasma Path',           roadColor: 0x1a0a2a, grassColor: 0x2a0a3a, barrierColor: 0xff00ff, cost: 110000000,      pointsMult: 22,   coinMult: 17 },
+    { id: 'voidroad',       name: 'Void Corridor',         roadColor: 0x000000, grassColor: 0x0a0a0a, barrierColor: 0x9900ff, cost: 170000000,      pointsMult: 23,   coinMult: 18 },
+    { id: 'novaroad',       name: 'Nova Boulevard',        roadColor: 0x2a2a0a, grassColor: 0x3a3a0a, barrierColor: 0xffff00, cost: 260000000,      pointsMult: 24.5, coinMult: 19 },
+    { id: 'wormholeroad',   name: 'Wormhole Way',          roadColor: 0x0a0a2a, grassColor: 0x1a0a3a, barrierColor: 0x6600ff, cost: 400000000,      pointsMult: 26,   coinMult: 20 },
+    { id: 'pulsarroad',     name: 'Pulsar Circuit',        roadColor: 0x0a2a2a, grassColor: 0x0a1a1a, barrierColor: 0x00ffff, cost: 600000000,      pointsMult: 27.5, coinMult: 21 },
+    { id: 'gravityroad',    name: 'Gravity Well',          roadColor: 0x1a1a1a, grassColor: 0x0a0a0a, barrierColor: 0x888888, cost: 900000000,      pointsMult: 29,   coinMult: 22 },
+    { id: 'antiroad',       name: 'Antimatter Alley',      roadColor: 0x2a001a, grassColor: 0x1a000f, barrierColor: 0xff00aa, cost: 1350000000,     pointsMult: 31,   coinMult: 23.5 },
+    { id: 'hyperionroad',   name: 'Hyperion Highway',      roadColor: 0x2a1a00, grassColor: 0x1a1000, barrierColor: 0xffaa00, cost: 2000000000,     pointsMult: 33,   coinMult: 25 },
+    { id: 'chronoroad',     name: 'Chrono Speedway',       roadColor: 0x001a2a, grassColor: 0x000f1a, barrierColor: 0x00aaff, cost: 3000000000,     pointsMult: 35,   coinMult: 26.5 },
+    { id: 'olympusroad',    name: 'Olympus Ascent',        roadColor: 0x2a2a2a, grassColor: 0x1a1a1a, barrierColor: 0xffffff, cost: 4500000000,     pointsMult: 37.5, coinMult: 28 },
+    { id: 'valkyrieroad',   name: 'Valkyrie Pass',         roadColor: 0x2a000a, grassColor: 0x1a0005, barrierColor: 0xcc0033, cost: 6750000000,     pointsMult: 40,   coinMult: 30 },
+    { id: 'phoenixroad',    name: "Phoenix Rising Road",   roadColor: 0x2a0f00, grassColor: 0x1a0800, barrierColor: 0xff5500, cost: 10000000000,    pointsMult: 43,   coinMult: 32 },
+    { id: 'leviathanroad',  name: 'Leviathan Depths',      roadColor: 0x000a1a, grassColor: 0x00050f, barrierColor: 0x003366, cost: 15000000000,    pointsMult: 46,   coinMult: 34 },
+    { id: 'behemothroad',   name: 'Behemoth Grounds',      roadColor: 0x1a0f0a, grassColor: 0x0f0805, barrierColor: 0x552200, cost: 22500000000,    pointsMult: 49,   coinMult: 36 },
+    { id: 'krakenroad',     name: 'Kraken Cove',           roadColor: 0x001a2a, grassColor: 0x000f1a, barrierColor: 0x004466, cost: 34000000000,    pointsMult: 52,   coinMult: 38 },
+    { id: 'dragonroad',     name: "Dragon's Descent",      roadColor: 0x2a0500, grassColor: 0x1a0300, barrierColor: 0xcc2200, cost: 50000000000,    pointsMult: 56,   coinMult: 41 },
+    { id: 'titanroad',      name: 'Titan Terrain',         roadColor: 0x2a2a2a, grassColor: 0x1a1a1a, barrierColor: 0xdddddd, cost: 75000000000,    pointsMult: 60,   coinMult: 44 },
+    { id: 'seraphroad',     name: 'Seraphic Skyway',       roadColor: 0x2a2a1a, grassColor: 0x1a1a0f, barrierColor: 0xffffcc, cost: 110000000000,   pointsMult: 65,   coinMult: 47 },
+    { id: 'oblivionroad',   name: 'Oblivion Highway',      roadColor: 0x000000, grassColor: 0x050505, barrierColor: 0x330033, cost: 165000000000,   pointsMult: 70,   coinMult: 50 },
+    { id: 'paradoxroad',    name: 'Paradox Loop',          roadColor: 0x1a002a, grassColor: 0x0f001a, barrierColor: 0x9900ff, cost: 250000000000,   pointsMult: 76,   coinMult: 54 },
+    { id: 'infinityroad',   name: 'Infinity Circuit',      roadColor: 0x1a1a1a, grassColor: 0x0a0a0a, barrierColor: 0xeeeeee, cost: 375000000000,   pointsMult: 82,   coinMult: 58 },
+    { id: 'eternityroad',   name: 'Eternity Expressway',   roadColor: 0x2a2200, grassColor: 0x1a1500, barrierColor: 0xffd700, cost: 560000000000,   pointsMult: 89,   coinMult: 62 },
+    { id: 'genesisroad',    name: 'Genesis Grounds',       roadColor: 0x002a1a, grassColor: 0x001a0f, barrierColor: 0x00ff88, cost: 840000000000,   pointsMult: 96,   coinMult: 67 },
+    { id: 'apocalypseroad', name: 'Apocalypse Route',      roadColor: 0x2a0000, grassColor: 0x1a0000, barrierColor: 0x880000, cost: 1250000000000,  pointsMult: 104,  coinMult: 72 },
+    { id: 'nirvanaroad',    name: 'Nirvana Pathway',       roadColor: 0x0a2a20, grassColor: 0x051a10, barrierColor: 0x88ffcc, cost: 1900000000000,  pointsMult: 113,  coinMult: 78 },
+    { id: 'transcendroad',  name: 'Transcendent Trail',    roadColor: 0x2a2a2a, grassColor: 0x1a1a1a, barrierColor: 0xffffff, cost: 2800000000000,  pointsMult: 122,  coinMult: 84 },
+    { id: 'omniroad',       name: 'Omnipotent Overpass',   roadColor: 0x2a2000, grassColor: 0x1a1400, barrierColor: 0xffd700, cost: 4200000000000,  pointsMult: 133,  coinMult: 91 },
+    { id: 'multiroad',      name: 'Multiverse Highway',    roadColor: 0x1a0a2a, grassColor: 0x0f051a, barrierColor: 0x6633ff, cost: 6300000000000,  pointsMult: 144,  coinMult: 98 },
+    { id: 'absoluteroad',   name: 'The Absolute Road',     roadColor: 0x000000, grassColor: 0x0a0a0a, barrierColor: 0xffffff, cost: 10000000000000, pointsMult: 160,  coinMult: 108 }
+  ];
+  let ownedCars = ['blue'];
+  let ownedRoads = ['asphalt'];
+  let selectedCarId = 'blue';
+  let selectedRoadId = 'asphalt';
+
+  // ---------- Rebirth (prestige) system ----------
+  // Costs 100 trillion coins the first time. The cost grows by x3 with every
+  // rebirth after that (steeper than simple doubling, so each successive
+  // rebirth is meaningfully harder than the last, not just "twice as much").
+  // Each rebirth also permanently doubles your points/coins multiplier —
+  // it stacks on top of your rank and shop multipliers, and never resets.
+  // Rebirthing spends every coin you have, not just the cost — it's a clean slate.
+  const REBIRTH_BASE_COST = 100000000000000; // 100 trillion
+  const REBIRTH_COST_GROWTH = 3; // each rebirth costs 3x the previous one
+  let rebirths = 0;
+
+  function getRebirthCost() {
+    return REBIRTH_BASE_COST * Math.pow(REBIRTH_COST_GROWTH, rebirths);
+  }
+  function getRebirthMultiplier() {
+    return Math.pow(2, rebirths);
+  }
+
+  function getSelectedCar() { return CARS.find(c => c.id === selectedCarId); }
+  function getSelectedRoad() { return ROADS.find(r => r.id === selectedRoadId); }
+
+  function applyCarVisual() {
+    const car = getSelectedCar();
+    if (playerCar.userData.bodyMesh) {
+      playerCar.userData.bodyMesh.material.color.setHex(car.color);
+    }
+  }
+  function applyRoadVisual() {
+    const road = getSelectedRoad();
+    roadMat.color.setHex(road.roadColor);
+    grassMat.color.setHex(road.grassColor);
+    barrierMat.color.setHex(road.barrierColor);
+  }
+
+  // Restores this account's saved progress (coins, rank, owned/equipped shop
+  // items) into the current session, e.g. after logging in on any device.
+  function applySavedProgress(saved) {
+    if (!saved) return;
+    if (typeof saved.totalCoins === 'number') totalCoins = saved.totalCoins;
+    if (typeof saved.rankIndex === 'number') rankIndex = saved.rankIndex;
+    if (typeof saved.rebirths === 'number') rebirths = saved.rebirths;
+    if (Array.isArray(saved.ownedCars) && saved.ownedCars.length > 0) ownedCars = saved.ownedCars;
+    if (Array.isArray(saved.ownedRoads) && saved.ownedRoads.length > 0) ownedRoads = saved.ownedRoads;
+    if (saved.selectedCarId && CARS.some(c => c.id === saved.selectedCarId)) selectedCarId = saved.selectedCarId;
+    if (saved.selectedRoadId && ROADS.some(r => r.id === saved.selectedRoadId)) selectedRoadId = saved.selectedRoadId;
+    applyCarVisual();
+    applyRoadVisual();
+    if (coinsValEl) coinsValEl.textContent = formatNumber(totalCoins);
+    if (rankNameEl) rankNameEl.textContent = rankNameFor(rankIndex);
+    if (multiplierEl) multiplierEl.textContent = 'x' + formatMultiplier(multiplierFor(rankIndex));
+  }
+
+  // Writes the current session's progress (coins, rank, owned/equipped shop
+  // items, rebirths, and any not-yet-saved time played or score improvement)
+  // back to this account, so nothing is lost when the game is closed or exited.
+  let lastFlushedFrames = 0;
+  async function flushAccountProgress() {
+    if (!firebaseReady || !currentUid) return;
+    try {
+      const docRef = db.collection('players').doc(currentUid);
+      const updates = {
+        totalCoins: Math.floor(totalCoins),
+        rankIndex: rankIndex,
+        rebirths: rebirths,
+        ownedCars: ownedCars,
+        ownedRoads: ownedRoads,
+        selectedCarId: selectedCarId,
+        selectedRoadId: selectedRoadId
+      };
+      const framesSinceFlush = raceElapsedFrames - lastFlushedFrames;
+      if (framesSinceFlush > 0) {
+        updates.totalTimePlayed = firebase.firestore.FieldValue.increment(Math.floor(framesSinceFlush / 60));
+        lastFlushedFrames = raceElapsedFrames;
+      }
+      await docRef.update(updates);
+      if (score > 0) await updateBestScoreIfHigher(currentUid, score);
+    } catch (err) {
+      console.error('Progress save failed:', err);
+    }
+  }
+
+  const keys = {};
+  window.addEventListener('keydown', e => { keys[e.key] = true; });
+  window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+  // Mobile controls
+  const mobileControls = document.getElementById('mobileControls');
+  function isTouchDevice() { return 'ontouchstart' in window || navigator.maxTouchPoints > 0; }
+  if (isTouchDevice()) mobileControls.style.display = 'flex';
+
+  function bindPad(id, key) {
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', e => { e.preventDefault(); keys[key] = true; });
+    el.addEventListener('touchend', e => { e.preventDefault(); keys[key] = false; });
+  }
+  bindPad('btnLeft', 'ArrowLeft');
+  bindPad('btnRight', 'ArrowRight');
+  bindPad('btnGas', 'ArrowUp');
+
+  const speedVal = document.getElementById('speedVal');
+  const coinsValEl = document.getElementById('coinsVal');
+  const scoreEl = document.getElementById('scoreVal');
+  const shopBtn = document.getElementById('shopBtn');
+  const shopOverlay = document.getElementById('shopOverlay');
+  const closeShopBtn = document.getElementById('closeShopBtn');
+  const carGrid = document.getElementById('carGrid');
+  const roadGrid = document.getElementById('roadGrid');
+  const shopCoinsVal = document.getElementById('shopCoinsVal');
+  const rebirthInfo = document.getElementById('rebirthInfo');
+  const rebirthError = document.getElementById('rebirthError');
+  const rebirthBtn = document.getElementById('rebirthBtn');
+
+  let wasRunningBeforeShop = false;
+
+  // Refreshes the rebirth section's cost/multiplier text and button state.
+  function updateRebirthUI() {
+    if (!rebirthInfo || !rebirthBtn) return;
+    const cost = getRebirthCost();
+    const currentMult = getRebirthMultiplier();
+    const nextMult = currentMult * 2;
+    rebirthInfo.innerHTML = `
+      Rebirths: <strong>${formatNumber(rebirths)}</strong> ·
+      Current bonus: <strong>x${formatMultiplier(currentMult)}</strong><br>
+      Next rebirth: needs <strong>${formatNumber(cost)} coins</strong> → bonus becomes <strong>x${formatMultiplier(nextMult)}</strong><br>
+      <span style="color:#ff9f9f;">⚠️ Rebirthing resets ALL your coins to 0, not just the cost.</span>
+    `;
+    const canAfford = totalCoins >= cost;
+    rebirthBtn.classList.toggle('disabled', !canAfford);
+    if (!rebirthConfirmPending) {
+      rebirthBtn.textContent = '🔁 REBIRTH';
+    }
+  }
+
+  let rebirthConfirmPending = false;
+  let rebirthConfirmTimeout = null;
+  rebirthBtn.addEventListener('click', () => {
+    const cost = getRebirthCost();
+    if (totalCoins < cost) {
+      rebirthError.textContent = `You need ${formatNumber(cost)} coins to rebirth.`;
+      return;
+    }
+    if (!rebirthConfirmPending) {
+      rebirthConfirmPending = true;
+      rebirthError.textContent = '';
+      rebirthBtn.textContent = 'Click again to confirm rebirth';
+      rebirthConfirmTimeout = setTimeout(() => {
+        rebirthConfirmPending = false;
+        rebirthBtn.textContent = '🔁 REBIRTH';
+      }, 4000);
+      return;
+    }
+    clearTimeout(rebirthConfirmTimeout);
+    rebirthConfirmPending = false;
+
+    // Rebirth resets ALL coins to zero (not just the cost) and permanently
+    // doubles the bonus multiplier — a clean slate, saved immediately.
+    totalCoins = 0;
+    rebirths += 1;
+    coinsValEl.textContent = formatNumber(totalCoins);
+    shopCoinsVal.textContent = formatNumber(totalCoins);
+    rebirthError.textContent = '';
+    updateRebirthUI();
+    flushAccountProgress();
+  });
+
+  function renderShop() {
+    shopCoinsVal.textContent = formatNumber(totalCoins);
+    updateRebirthUI();
+
+    function renderGrid(gridEl, items, ownedList, selectedId, onBuy, onEquip, colorKey) {
+      gridEl.innerHTML = '';
+      items.forEach(item => {
+        const owned = ownedList.includes(item.id);
+        const equipped = item.id === selectedId;
+        const card = document.createElement('div');
+        card.className = 'shopItem' + (equipped ? ' equipped' : '');
+
+        const swatch = document.createElement('div');
+        swatch.className = 'swatch';
+        swatch.style.background = '#' + item[colorKey].toString(16).padStart(6, '0');
+        card.appendChild(swatch);
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'itemName';
+        nameEl.textContent = item.name;
+        card.appendChild(nameEl);
+
+        const statsEl = document.createElement('div');
+        statsEl.className = 'itemStats';
+        statsEl.textContent = `+${Math.round((item.pointsMult - 1) * 100)}% points · +${Math.round((item.coinMult - 1) * 100)}% coins`;
+        card.appendChild(statsEl);
+
+        if (equipped) {
+          const label = document.createElement('div');
+          label.className = 'equippedLabel';
+          label.textContent = '✓ Equipped';
+          card.appendChild(label);
+        } else if (owned) {
+          const btn = document.createElement('button');
+          btn.className = 'equipBtn';
+          btn.textContent = 'Equip';
+          btn.onclick = () => onEquip(item.id);
+          card.appendChild(btn);
+        } else {
+          const btn = document.createElement('button');
+          btn.className = 'buyBtn';
+          btn.textContent = `🪙 ${item.cost}`;
+          btn.disabled = totalCoins < item.cost;
+          btn.onclick = () => onBuy(item);
+          card.appendChild(btn);
+        }
+
+        gridEl.appendChild(card);
+      });
+    }
+
+    renderGrid(carGrid, CARS, ownedCars, selectedCarId,
+      (item) => {
+        if (totalCoins >= item.cost) {
+          totalCoins -= item.cost;
+          ownedCars.push(item.id);
+          selectedCarId = item.id;
+          applyCarVisual();
+          coinsValEl.textContent = formatNumber(totalCoins);
+          renderShop();
+        }
+      },
+      (id) => { selectedCarId = id; applyCarVisual(); renderShop(); },
+      'color'
+    );
+
+    renderGrid(roadGrid, ROADS, ownedRoads, selectedRoadId,
+      (item) => {
+        if (totalCoins >= item.cost) {
+          totalCoins -= item.cost;
+          ownedRoads.push(item.id);
+          selectedRoadId = item.id;
+          applyRoadVisual();
+          coinsValEl.textContent = formatNumber(totalCoins);
+          renderShop();
+        }
+      },
+      (id) => { selectedRoadId = id; applyRoadVisual(); renderShop(); },
+      'roadColor'
+    );
+  }
+
+  function openShop() {
+    wasRunningBeforeShop = running;
+    running = false;
+    renderShop();
+    shopOverlay.style.display = 'flex';
+  }
+  function closeShop() {
+    shopOverlay.style.display = 'none';
+    if (wasRunningBeforeShop && !gameOver) running = true;
+  }
+
+  shopBtn.addEventListener('click', openShop);
+  closeShopBtn.addEventListener('click', closeShop);
+
+  // ---------- Accounts & global leaderboard, backed by Firebase (works anywhere
+  // this file is hosted, not just inside Claude.ai) ----------
+  //
+  // ONE-TIME SETUP REQUIRED before this actually works:
+  //   1. Go to https://console.firebase.google.com and create a project (free tier is plenty).
+  //   2. In "Build > Authentication > Sign-in method", enable the "Email/Password"
+  //      and "Google" providers.
+  //   3. In "Build > Firestore Database", click "Create database" (test mode is fine
+  //      to start), then go to the "Rules" tab and paste in:
+  //
+  //        rules_version = '2';
+  //        service cloud.firestore {
+  //          match /databases/{database}/documents {
+  //            match /players/{uid} {
+  //              allow read: if true;
+  //              allow write: if request.auth != null && request.auth.uid == uid;
+  //            }
+  //          }
+  //        }
+  //
+  //   4. In Project settings > General, scroll to "Your apps", click the web icon
+  //      (</>) to register a web app, and copy the firebaseConfig object it gives you.
+  //   5. Paste that config into FIREBASE_CONFIG below, replacing the placeholder.
+  //   6. If you host this file on a custom domain, add that domain under
+  //      Authentication > Settings > Authorized domains, or Google Sign-In's popup
+  //      will be rejected.
+  //
+  // Until steps 1–5 are done, the game still runs fine — signing up/logging in will
+  // just show a clear "not configured yet" message instead of failing silently.
+  const FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyCxOF6pYdwkhFTGC7tRyAeWfFi9k45mQ8s',
+    authDomain: 'd-car-game-478e7.firebaseapp.com',
+    projectId: 'd-car-game-478e7',
+    storageBucket: 'd-car-game-478e7.firebasestorage.app',
+    messagingSenderId: '392313252356',
+    appId: '1:392313252356:web:d117779700d19227ab6351'
+  };
+
+  const topButtons = document.getElementById('topButtons');
+  const leaderboardBtn = document.getElementById('leaderboardBtn');
+  const leaderboardOverlay = document.getElementById('leaderboardOverlay');
+  const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
+  const leaderboardList = document.getElementById('leaderboardList');
+  const leaderboardStatus = document.getElementById('leaderboardStatus');
+  const authOrReady = document.getElementById('authOrReady');
+
+  let currentUser = null;   // display username of the logged-in account
+  let currentUid = null;    // Firebase Auth uid, used as the Firestore document id
+  let firebaseReady = false;
+  let firebaseNotReadyReason = '';
+  let auth = null;
+  let db = null;
+
+  if (typeof firebase === 'undefined') {
+    // The Firebase SDK <script> tags never loaded. This is the expected
+    // result if you're testing inside Claude's in-chat preview — that
+    // sandbox blocks scripts from loading from most external domains
+    // (including gstatic.com, where the Firebase SDK is hosted). Open the
+    // downloaded car_racing_game.html file directly in a real browser tab
+    // (or host it somewhere) to test Firebase features.
+    firebaseNotReadyReason = "Firebase SDK didn't load — this is expected in Claude's in-chat preview. Open the downloaded HTML file directly in a browser to test accounts.";
+  } else if (FIREBASE_CONFIG.apiKey.startsWith('YOUR_')) {
+    firebaseNotReadyReason = 'FIREBASE_CONFIG still has placeholder values — paste your real Firebase project config in near the top of the accounts section.';
+  } else {
+    try {
+      firebase.initializeApp(FIREBASE_CONFIG);
+      auth = firebase.auth();
+      db = firebase.firestore();
+      firebaseReady = true;
+    } catch (err) {
+      console.error('Firebase init failed:', err);
+      firebaseNotReadyReason = `Firebase failed to initialize: ${err.message || err}`;
+    }
+  }
+
+  // Firebase Auth's email/password provider needs an email — we let players use
+  // a plain username by mapping it to a fake-but-valid address behind the scenes.
+  // The real, human-facing username lives in each player's Firestore document.
+  function syntheticEmail(username) {
+    return `${username.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '')}@neon-drift.game`;
+  }
+
+  function friendlyAuthError(err) {
+    switch (err && err.code) {
+      case 'auth/email-already-in-use': return 'That username is already taken.';
+      case 'auth/weak-password': return 'Password must be at least 6 characters.';
+      case 'auth/invalid-email': return 'Please use letters/numbers only in your username.';
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential': return 'Incorrect username or password.';
+      case 'auth/too-many-requests': return 'Too many attempts — please wait a moment and try again.';
+      case 'auth/operation-not-allowed': return 'Email/Password sign-in isn\'t enabled yet — turn it on in Firebase Console → Authentication → Sign-in method.';
+      case 'auth/unauthorized-domain': return 'This domain isn\'t authorized in Firebase — add it under Authentication → Settings → Authorized domains.';
+      case 'auth/configuration-not-found': return 'Firebase Authentication isn\'t set up for this project yet — enable it in Firebase Console.';
+      case 'permission-denied': return 'Firestore blocked this write — check that your security rules match the ones in the setup instructions, and that Firestore Database has been created.';
+      case 'unavailable': return 'Could not reach Firestore — check that a Firestore database has been created for this project.';
+      default:
+        // Don't hide unrecognized errors behind a generic message — show the
+        // real code/message so it's actually possible to debug what's wrong.
+        return err && (err.code || err.message)
+          ? `${err.code || 'Error'}: ${err.message || 'unknown error'}`
+          : 'Something went wrong. Please try again.';
+    }
+  }
+
+  async function signUp(username, password) {
+    if (!firebaseReady) return { ok: false, error: firebaseNotReadyReason || 'Accounts need to be configured first — see comments in the code.' };
+    const cleanUsername = username.trim();
+    if (cleanUsername.length < 2) return { ok: false, error: 'Username must be at least 2 characters.' };
+    if (!password || password.length < 6) return { ok: false, error: 'Password must be at least 6 characters.' };
+
+    try {
+      const credential = await auth.createUserWithEmailAndPassword(syntheticEmail(cleanUsername), password);
+      await db.collection('players').doc(credential.user.uid).set({
+        username: cleanUsername,
+        bestScore: 0,
+        totalTimePlayed: 0,
+        totalCoins: 0,
+        rankIndex: 0,
+        rebirths: 0,
+        ownedCars: ['blue'],
+        ownedRoads: ['asphalt'],
+        selectedCarId: 'blue',
+        selectedRoadId: 'asphalt',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return { ok: true, username: cleanUsername, uid: credential.user.uid };
+    } catch (err) {
+      console.error('Sign up failed:', err);
+      return { ok: false, error: friendlyAuthError(err) };
+    }
+  }
+
+  async function logIn(username, password) {
+    if (!firebaseReady) return { ok: false, error: firebaseNotReadyReason || 'Accounts need to be configured first — see comments in the code.' };
+    const cleanUsername = username.trim();
+    if (!cleanUsername || !password) return { ok: false, error: 'Enter a username and password.' };
+
+    try {
+      const credential = await auth.signInWithEmailAndPassword(syntheticEmail(cleanUsername), password);
+      const doc = await db.collection('players').doc(credential.user.uid).get();
+      const data = doc.exists ? doc.data() : {};
+      return { ok: true, username: data.username || cleanUsername, uid: credential.user.uid, saved: data };
+    } catch (err) {
+      console.error('Log in failed:', err);
+      return { ok: false, error: friendlyAuthError(err) };
+    }
+  }
+
+  async function signInWithGoogle() {
+    if (!firebaseReady) return { ok: false, error: firebaseNotReadyReason || 'Accounts need to be configured first — see comments in the code.' };
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      const result = await auth.signInWithPopup(provider);
+      const user = result.user;
+      const docRef = db.collection('players').doc(user.uid);
+      const snap = await docRef.get();
+      let displayName;
+      let savedData = {};
+      if (!snap.exists) {
+        displayName = user.displayName || (user.email ? user.email.split('@')[0] : 'GoogleUser');
+        savedData = {
+          username: displayName,
+          bestScore: 0,
+          totalTimePlayed: 0,
+          totalCoins: 0,
+          rankIndex: 0,
+          rebirths: 0,
+          ownedCars: ['blue'],
+          ownedRoads: ['asphalt'],
+          selectedCarId: 'blue',
+          selectedRoadId: 'asphalt',
+          authMethod: 'google',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await docRef.set(savedData);
+      } else {
+        savedData = snap.data();
+        displayName = savedData.username;
+      }
+      return { ok: true, username: displayName, uid: user.uid, saved: savedData };
+    } catch (err) {
+      console.error('Google sign-in failed:', err);
+      return { ok: false, error: 'Google sign-in failed or was cancelled.' };
+    }
+  }
+
+  function logOut() {
+    flushAccountProgress();
+    if (auth) auth.signOut();
+    currentUser = null;
+    currentUid = null;
+    renderAuthOrReady();
+  }
+
+  // Only writes if this run beat the account's previous best — a worse run
+  // never overwrites a better score already on the books.
+  async function updateBestScoreIfHigher(uid, finalScore) {
+    if (!firebaseReady || !uid) return;
+    try {
+      const docRef = db.collection('players').doc(uid);
+      const snap = await docRef.get();
+      if (!snap.exists) return;
+      const rounded = Math.floor(finalScore);
+      if (rounded > (snap.data().bestScore || 0)) {
+        await docRef.update({ bestScore: rounded });
+      }
+    } catch (err) {
+      console.error('Score update failed:', err);
+    }
+  }
+
+  function formatDuration(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${sec}s`;
+    return `${sec}s`;
+  }
+
+  let leaderboardMode = 'score'; // 'score' or 'time'
+
+  async function renderLeaderboard() {
+    leaderboardList.innerHTML = '';
+    leaderboardStatus.style.display = 'block';
+    leaderboardStatus.textContent = 'Loading...';
+
+    if (!firebaseReady) {
+      leaderboardStatus.textContent = 'Leaderboard needs to be configured first — see comments in the code.';
+      return;
+    }
+
+    const field = leaderboardMode === 'time' ? 'totalTimePlayed' : leaderboardMode === 'rebirth' ? 'rebirths' : 'bestScore';
+
+    try {
+      const snapshot = await db.collection('players')
+        .orderBy(field, 'desc')
+        .limit(3)
+        .get();
+
+      const top = snapshot.docs
+        .map(d => d.data())
+        .filter(d => typeof d[field] === 'number' && d[field] > 0);
+
+      if (top.length === 0) {
+        leaderboardStatus.textContent = leaderboardMode === 'time'
+          ? 'No time logged yet — go play a race!'
+          : leaderboardMode === 'rebirth'
+            ? 'No rebirths yet — be the first!'
+            : 'No scores yet — be the first to set one!';
+        return;
+      }
+
+      leaderboardStatus.style.display = 'none';
+      top.forEach((entry, i) => {
+        const row = document.createElement('div');
+        row.className = 'lbRow' + (i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : '');
+        const displayValue = leaderboardMode === 'time' ? formatDuration(entry[field]) : formatNumber(entry[field]);
+        row.innerHTML = `
+          <div class="lbRank">#${i + 1}</div>
+          <div class="lbName"></div>
+          <div class="lbScore">${displayValue}</div>
+        `;
+        row.querySelector('.lbName').textContent = entry.username;
+        leaderboardList.appendChild(row);
+      });
+    } catch (err) {
+      console.error('Leaderboard load failed:', err);
+      leaderboardStatus.textContent = 'Could not load the leaderboard right now.';
+    }
+  }
+
+  let wasRunningBeforeLeaderboard = false;
+  function openLeaderboard() {
+    wasRunningBeforeLeaderboard = running;
+    running = false;
+    leaderboardOverlay.style.display = 'flex';
+    renderLeaderboard();
+  }
+  function closeLeaderboard() {
+    leaderboardOverlay.style.display = 'none';
+    if (wasRunningBeforeLeaderboard && !gameOver) running = true;
+  }
+
+  leaderboardBtn.addEventListener('click', openLeaderboard);
+  closeLeaderboardBtn.addEventListener('click', closeLeaderboard);
+
+  // Wipes every account's bestScore, totalTimePlayed, and rebirths back to 0,
+  // clearing all three leaderboards for everyone. Login credentials and
+  // owned shop items are left intact — only the leaderboard-tracked stats reset.
+  async function resetAllLeaderboards() {
+    if (!firebaseReady) return;
+    leaderboardStatus.style.display = 'block';
+    leaderboardStatus.textContent = 'Resetting leaderboard...';
+    leaderboardList.innerHTML = '';
+    try {
+      const snapshot = await db.collection('players').get();
+      const batchWrites = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const updates = {};
+        if ((data.bestScore || 0) > 0) updates.bestScore = 0;
+        if ((data.totalTimePlayed || 0) > 0) updates.totalTimePlayed = 0;
+        if ((data.rebirths || 0) > 0) updates.rebirths = 0;
+        if (Object.keys(updates).length > 0) {
+          batchWrites.push(doc.ref.update(updates));
+        }
+      });
+      await Promise.all(batchWrites);
+    } catch (err) {
+      console.error('Leaderboard reset failed:', err);
+    }
+    renderLeaderboard();
+  }
+
+  const resetLeaderboardBtn = document.getElementById('resetLeaderboardBtn');
+  let resetLbConfirmPending = false;
+  let resetLbConfirmTimeout = null;
+  resetLeaderboardBtn.addEventListener('click', () => {
+    if (!resetLbConfirmPending) {
+      resetLbConfirmPending = true;
+      resetLeaderboardBtn.textContent = 'Click again to confirm reset';
+      resetLeaderboardBtn.classList.add('confirming');
+      resetLbConfirmTimeout = setTimeout(() => {
+        resetLbConfirmPending = false;
+        resetLeaderboardBtn.textContent = '⚠️ Reset All Leaderboards';
+        resetLeaderboardBtn.classList.remove('confirming');
+      }, 4000);
+      return;
+    }
+    clearTimeout(resetLbConfirmTimeout);
+    resetLbConfirmPending = false;
+    resetLeaderboardBtn.textContent = '⚠️ Reset All Leaderboards';
+    resetLeaderboardBtn.classList.remove('confirming');
+    resetAllLeaderboards();
+  });
+
+  const lbTabScore = document.getElementById('lbTabScore');
+  const lbTabTime = document.getElementById('lbTabTime');
+  const lbTabRebirth = document.getElementById('lbTabRebirth');
+  const lbNoteText = document.getElementById('lbNoteText');
+  lbTabScore.addEventListener('click', () => {
+    leaderboardMode = 'score';
+    lbTabScore.classList.add('active');
+    lbTabTime.classList.remove('active');
+    lbTabRebirth.classList.remove('active');
+    lbNoteText.textContent = 'Top 3 all-time high scores by account. Only your best run counts — your username and best score are visible to everyone.';
+    renderLeaderboard();
+  });
+  lbTabTime.addEventListener('click', () => {
+    leaderboardMode = 'time';
+    lbTabTime.classList.add('active');
+    lbTabScore.classList.remove('active');
+    lbTabRebirth.classList.remove('active');
+    lbNoteText.textContent = 'Top 3 accounts by total time played, added up across every race. Your username and total time are visible to everyone.';
+    renderLeaderboard();
+  });
+  lbTabRebirth.addEventListener('click', () => {
+    leaderboardMode = 'rebirth';
+    lbTabRebirth.classList.add('active');
+    lbTabScore.classList.remove('active');
+    lbTabTime.classList.remove('active');
+    lbNoteText.textContent = 'Top 3 accounts by number of rebirths. Your username and rebirth count are visible to everyone.';
+    renderLeaderboard();
+  });
+
+  // Renders either the sign-up/log-in form (logged out) or the Start/Shop/
+  // Leaderboard panel (logged in) into the start screen. Re-run after every
+  // login, signup, and logout since the DOM it builds is replaced each time.
+  function renderAuthOrReady() {
+    if (!currentUser) {
+      authOrReady.innerHTML = `
+        <div id="authPanel">
+          <div class="authTabs">
+            <button class="authTab active" id="authTabLogin" type="button">Log In</button>
+            <button class="authTab" id="authTabSignup" type="button">Sign Up</button>
+          </div>
+          <input class="authInput" id="authUsername" placeholder="Username" maxlength="16" autocomplete="off">
+          <input class="authInput" id="authPassword" placeholder="Password" type="password" autocomplete="off">
+          <div class="nameError" id="authError"></div>
+          <div class="startBtn" id="authSubmitBtn">LOG IN</div>
+          <div class="authSecurityNote">${firebaseReady ? "Casual game account — please don't reuse a real password." : (firebaseNotReadyReason || 'Accounts need a one-time Firebase setup — see comments in the code.')}</div>
+          <div class="authDivider">or</div>
+          <div class="startBtn secondary" id="googleSignInBtn">Sign in with Google</div>
+        </div>
+      `;
+
+      let mode = 'login';
+      const tabLogin = document.getElementById('authTabLogin');
+      const tabSignup = document.getElementById('authTabSignup');
+      const submitBtn = document.getElementById('authSubmitBtn');
+      const errorEl = document.getElementById('authError');
+      const usernameEl = document.getElementById('authUsername');
+      const passwordEl = document.getElementById('authPassword');
+      const googleBtn = document.getElementById('googleSignInBtn');
+
+      function setMode(next) {
+        mode = next;
+        tabLogin.classList.toggle('active', mode === 'login');
+        tabSignup.classList.toggle('active', mode === 'signup');
+        submitBtn.textContent = mode === 'login' ? 'LOG IN' : 'SIGN UP';
+        errorEl.textContent = '';
+      }
+      tabLogin.addEventListener('click', () => setMode('login'));
+      tabSignup.addEventListener('click', () => setMode('signup'));
+
+      submitBtn.addEventListener('click', async () => {
+        errorEl.textContent = 'Please wait...';
+        const username = usernameEl.value;
+        const password = passwordEl.value;
+        const result = mode === 'login' ? await logIn(username, password) : await signUp(username, password);
+        if (!result.ok) {
+          errorEl.textContent = result.error;
+          return;
+        }
+        currentUser = result.username;
+        currentUid = result.uid;
+        applySavedProgress(result.saved);
+        renderAuthOrReady();
+      });
+
+      googleBtn.addEventListener('click', async () => {
+        errorEl.textContent = 'Please wait...';
+        const result = await signInWithGoogle();
+        if (!result.ok) {
+          errorEl.textContent = result.error;
+          return;
+        }
+        currentUser = result.username;
+        currentUid = result.uid;
+        applySavedProgress(result.saved);
+        renderAuthOrReady();
+      });
+    } else {
+      authOrReady.innerHTML = `
+        <div class="loggedInLine">Logged in as <strong></strong><span class="logoutLink" id="logoutLink">Log out</span></div>
+        <div class="startBtn" id="startBtn">START ENGINE</div>
+        <div class="startBtn secondary" id="openShopFromStart">🛒 SHOP</div>
+        <div class="startBtn secondary" id="openLeaderboardFromStart">🏆 LEADERBOARD</div>
+      `;
+      authOrReady.querySelector('.loggedInLine strong').textContent = currentUser;
+
+      document.getElementById('logoutLink').addEventListener('click', logOut);
+      document.getElementById('startBtn').addEventListener('click', () => {
+        resetGame();
+        running = true;
+        centerMsg.style.display = 'none';
+        topButtons.style.display = 'flex';
+      });
+      document.getElementById('openShopFromStart').addEventListener('click', openShop);
+      document.getElementById('openLeaderboardFromStart').addEventListener('click', openLeaderboard);
+    }
+  }
+
+  const rankNameEl = document.getElementById('rankName');
+  const multiplierEl = document.getElementById('multiplier');
+  const rankUpToast = document.getElementById('rankUpToast');
+  const centerMsg = document.getElementById('centerMsg');
+  const resetRankBtn = document.getElementById('resetRankBtn');
+
+  resetRankBtn.addEventListener('click', () => {
+    rankIndex = 0;
+    pointsSinceRank = 0;
+    rankNameEl.textContent = rankNameFor(0);
+    multiplierEl.textContent = 'x' + formatMultiplier(multiplierFor(0));
+  });
+
+  renderAuthOrReady();
+
+  // Firebase Auth persists sessions across page reloads by default — if the
+  // player already signed in before (even in an earlier visit), this fires
+  // automatically and logs them back in without re-entering credentials.
+  if (firebaseReady) {
+    auth.onAuthStateChanged(async (user) => {
+      if (user && !currentUser) {
+        try {
+          const doc = await db.collection('players').doc(user.uid).get();
+          if (doc.exists) {
+            const data = doc.data();
+            currentUser = data.username;
+            currentUid = user.uid;
+            applySavedProgress(data);
+            renderAuthOrReady();
+          }
+        } catch (err) {
+          console.error('Session restore failed:', err);
+        }
+      }
+    });
+  }
+
+  // Auto-save progress whenever the game might be about to disappear —
+  // switching tabs/apps, closing the tab, or navigating away. visibilitychange
+  // fires reliably (including on mobile) as soon as the tab is backgrounded,
+  // which is what we mainly rely on; pagehide/beforeunload are best-effort
+  // backups since async writes aren't guaranteed to finish during unload.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      flushAccountProgress();
+    }
+  });
+  window.addEventListener('pagehide', () => {
+    flushAccountProgress();
+  });
+  window.addEventListener('beforeunload', () => {
+    flushAccountProgress();
+  });
+
+  let toastTimeout = null;
+  function flashRankUp(name, multiplier) {
+    // Rank-up popup intentionally disabled — rank/multiplier still update in the HUD.
+  }
+
+  function resetGame() {
+    speed = 0;
+    playerX = 0;
+    score = 0;
+    totalDistance = 0;
+    pointsSinceRank = 0;
+    raceElapsedFrames = 0;
+    lastFlushedFrames = 0;
+    gameOver = false;
+    playerCar.position.set(0, 0, 5);
+    trafficCars.forEach(c => scene.remove(c));
+    trafficCars.length = 0;
+    for (let i = 0; i < 8; i++) spawnTrafficCar(-40 - i * 30);
+    // Note: rankIndex is intentionally NOT reset — rank carries over between races.
+    rankNameEl.textContent = rankNameFor(rankIndex);
+    multiplierEl.textContent = 'x' + formatMultiplier(multiplierFor(rankIndex));
+    rankUpToast.classList.remove('show');
+  }
+
+  function showGameOver() {
+    running = false;
+    gameOver = true;
+
+    // Convert this race's score into coins at a 10:1 ratio, boosted by your
+    // equipped car and road, then added to your permanent stash.
+    const car = getSelectedCar();
+    const road = getSelectedRoad();
+    const coinsEarned = Math.floor((score / 10) * car.coinMult * road.coinMult * getRebirthMultiplier());
+    totalCoins += coinsEarned;
+    coinsValEl.textContent = formatNumber(totalCoins);
+
+    // Save everything back to the account: this run's best score (if it's a
+    // new personal best), the time just played, and current coins/rank/shop
+    // items — so nothing is lost even if the game is closed right now.
+    flushAccountProgress();
+
+    centerMsg.innerHTML = `
+      <h1 style="color:#ff5f6d;">💥 CRASHED</h1>
+      <p>Final Score: ${formatNumber(score)}</p>
+      <p>Rank Reached: <strong style="color:#7ee8ff;">${rankNameFor(rankIndex)}</strong> (x${formatMultiplier(multiplierFor(rankIndex))})</p>
+      <p style="color:#ffe066;">🪙 +${formatNumber(coinsEarned)} coins earned — total: ${formatNumber(totalCoins)}</p>
+      <div class="startBtn" id="restartBtn">RACE AGAIN</div>
+      <div class="startBtn secondary" id="openShopFromGameOver">🛒 SHOP</div>
+      <div class="startBtn secondary" id="openLeaderboardFromGameOver">🏆 LEADERBOARD</div>
+    `;
+    centerMsg.style.display = 'block';
+    topButtons.style.display = 'none';
+    document.getElementById('restartBtn').addEventListener('click', () => {
+      resetGame();
+      running = true;
+      centerMsg.style.display = 'none';
+      topButtons.style.display = 'flex';
+    });
+    document.getElementById('openShopFromGameOver').addEventListener('click', openShop);
+    document.getElementById('openLeaderboardFromGameOver').addEventListener('click', openLeaderboard);
+  }
+
+  // ---------- Collision helper ----------
+  function checkCollision(car) {
+    const dx = Math.abs(car.position.x - playerCar.position.x);
+    const dz = Math.abs(car.position.z - playerCar.position.z);
+    return dx < 1.6 && dz < 2.6;
+  }
+
+  // ---------- Animate ----------
+  const ROAD_HALF = ROAD_WIDTH / 2 - 1;
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    if (running && !gameOver) {
+      frameCount++;
+      raceElapsedFrames++;
+      // Acceleration / braking
+      if (keys['ArrowUp'] || keys['w'] || keys['W']) {
+        speed = Math.min(MAX_SPEED, speed + ACCEL); // capped so top speed reads exactly 500 km/h
+      } else if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+        speed = Math.max(0, speed - BRAKE);
+      } else {
+        speed = Math.max(0, speed - FRICTION);
+      }
+
+      // Steering
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        playerX -= STEER_SPEED * (0.4 + speed);
+      }
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        playerX += STEER_SPEED * (0.4 + speed);
+      }
+      playerX = Math.max(-ROAD_HALF, Math.min(ROAD_HALF, playerX));
+      playerCar.position.x += (playerX - playerCar.position.x) * 0.25;
+      playerCar.rotation.z = (playerX - playerCar.position.x) * -0.15;
+
+      // Move road segments toward camera (illusion of forward motion)
+      const moveAmount = speed * 2;
+      roadSegments.forEach(seg => {
+        seg.position.z += moveAmount;
+        if (seg.position.z > SEGMENT_LENGTH * 1.5) {
+          seg.position.z -= SEGMENT_LENGTH * SEGMENT_COUNT;
+        }
+      });
+
+      // Move traffic — cars cruise forward/backward relative to the player based on
+      // their own speed, and periodically pick a new lane to drift into, so faster
+      // ones visibly cut across lanes while overtaking.
+      trafficCars.forEach(car => {
+        car.position.z += moveAmount - car.userData.speed * 1.5;
+
+        // Countdown to next lane change; pick a new adjacent-ish target lane when it hits 0
+        car.userData.laneChangeTimer--;
+        if (car.userData.laneChangeTimer <= 0) {
+          const options = [0, 1, 2, 3].filter(l => l !== car.userData.targetLane);
+          car.userData.targetLane = options[Math.floor(Math.random() * options.length)];
+          car.userData.laneChangeTimer = 150 + Math.floor(Math.random() * 240);
+        }
+
+        // Smoothly steer toward the target lane, with a slight bank while moving across
+        const desiredX = laneX(car.userData.targetLane);
+        const dx = desiredX - car.position.x;
+        car.position.x += dx * 0.012;
+        car.rotation.z = -dx * 0.04;
+        car.userData.lane = car.userData.targetLane;
+
+        // Blink a turn-signal indicator while actively changing lanes, showing which way
+        const isChangingLanes = Math.abs(dx) > 0.08;
+        const blinkOn = frameCount % 20 < 10;
+        if (car.userData.indicatorL && car.userData.indicatorR) {
+          car.userData.indicatorL.visible = isChangingLanes && dx < 0 && blinkOn;
+          car.userData.indicatorR.visible = isChangingLanes && dx > 0 && blinkOn;
+        }
+
+        // Recycle cars that fall far behind or shoot far ahead of the player
+        if (car.position.z > 20) {
+          car.position.z = -160 - Math.random() * 80;
+          const newLane = Math.floor(Math.random() * LANE_COUNT);
+          car.userData.lane = newLane;
+          car.userData.targetLane = newLane;
+          car.position.x = laneX(newLane);
+          car.userData.speed = randomTrafficSpeed();
+          car.userData.laneChangeTimer = 90 + Math.floor(Math.random() * 180);
+        } else if (car.position.z < -260) {
+          car.position.z = 15 + Math.random() * 10;
+          const newLane = Math.floor(Math.random() * LANE_COUNT);
+          car.userData.lane = newLane;
+          car.userData.targetLane = newLane;
+          car.position.x = laneX(newLane);
+          car.userData.speed = randomTrafficSpeed();
+          car.userData.laneChangeTimer = 90 + Math.floor(Math.random() * 180);
+        }
+
+        if (checkCollision(car)) {
+          showGameOver();
+        }
+      });
+
+      // The further you go, the more points you earn — and every 500
+      // points earns a new rank, which itself pays out a bigger
+      // multiplier on every bit of distance from then on. Rank is
+      // permanent and carries over even after you crash. Your equipped
+      // car and road from the shop also boost how fast points come in.
+      totalDistance += moveAmount;
+      const rankMultiplier = multiplierFor(rankIndex);
+      const shopMultiplier = getSelectedCar().pointsMult * getSelectedRoad().pointsMult * getRebirthMultiplier();
+      const earned = speed * rankMultiplier * shopMultiplier * 0.6;
+      score += earned;
+      pointsSinceRank += earned;
+
+      // Jump straight to the correct rank in one step — a burst of points
+      // (especially at high multipliers, where earning is fastest) could
+      // otherwise cross hundreds or thousands of rank thresholds in a single
+      // frame, and looping through each one individually is what caused the
+      // game to stutter/freeze the longer a session went on.
+      if (pointsSinceRank >= pointsForNextRank(rankIndex)) {
+        const ranksGained = computeRankGain(rankIndex, pointsSinceRank);
+        pointsSinceRank -= pointsToClimb(rankIndex, ranksGained);
+        rankIndex += ranksGained;
+        const name = rankNameFor(rankIndex);
+        const mult = multiplierFor(rankIndex);
+        rankNameEl.textContent = name;
+        multiplierEl.textContent = 'x' + formatMultiplier(mult);
+        flashRankUp(name, mult);
+      }
+
+      scoreEl.textContent = formatNumber(score);
+      speedVal.textContent = Math.floor(speed * SPEED_DISPLAY_SCALE);
+
+      // Camera follow
+      camera.position.x += (playerCar.position.x - camera.position.x) * 0.1;
+      camera.position.z = playerCar.position.z + 9;
+      camera.position.y = 5 + speed * 1.5;
+      camera.lookAt(playerCar.position.x, 1, playerCar.position.z - 8);
+
+      // Slight FOV kick for speed feel
+      camera.fov = Math.min(120, 70 + speed * 12);
+      camera.updateProjectionMatrix();
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+})();
+</script>
+</body>
+</html>
