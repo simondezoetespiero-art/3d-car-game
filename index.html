@@ -292,23 +292,6 @@
   .lbRow .lbScore { font-weight: 700; font-size: 14px; color: #ffe066; }
   #leaderboardStatus { text-align: center; opacity: 0.6; font-size: 13px; padding: 20px 0; }
   #closeLeaderboardBtn { margin-top: 20px; width: 100%; }
-  #resetLeaderboardBtn {
-    margin-top: 10px;
-    width: 100%;
-    background: rgba(255,95,109,0.15);
-    border: 1px solid rgba(255,95,109,0.4);
-    color: #ff9f9f;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 8px 0;
-    border-radius: 10px;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-align: center;
-  }
-  #resetLeaderboardBtn:hover { background: rgba(255,95,109,0.25); }
-  #resetLeaderboardBtn.confirming { background: rgba(255,95,109,0.35); color: #fff; }
 
   #shopOverlay {
     position: fixed;
@@ -505,7 +488,6 @@
     <div id="leaderboardList"></div>
     <div id="leaderboardStatus">Loading...</div>
     <div class="startBtn" id="closeLeaderboardBtn">CLOSE</div>
-    <div id="resetLeaderboardBtn">⚠️ Reset All Leaderboards</div>
   </div>
 </div>
 
@@ -1536,56 +1518,6 @@
 
   leaderboardBtn.addEventListener('click', openLeaderboard);
   closeLeaderboardBtn.addEventListener('click', closeLeaderboard);
-
-  // Wipes every account's bestScore, totalTimePlayed, and rebirths back to 0,
-  // clearing all three leaderboards for everyone. Login credentials and
-  // owned shop items are left intact — only the leaderboard-tracked stats reset.
-  async function resetAllLeaderboards() {
-    if (!firebaseReady) return;
-    leaderboardStatus.style.display = 'block';
-    leaderboardStatus.textContent = 'Resetting leaderboard...';
-    leaderboardList.innerHTML = '';
-    try {
-      const snapshot = await db.collection('players').get();
-      const batchWrites = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const updates = {};
-        if ((data.bestScore || 0) > 0) updates.bestScore = 0;
-        if ((data.totalTimePlayed || 0) > 0) updates.totalTimePlayed = 0;
-        if ((data.rebirths || 0) > 0) updates.rebirths = 0;
-        if (Object.keys(updates).length > 0) {
-          batchWrites.push(doc.ref.update(updates));
-        }
-      });
-      await Promise.all(batchWrites);
-    } catch (err) {
-      console.error('Leaderboard reset failed:', err);
-    }
-    renderLeaderboard();
-  }
-
-  const resetLeaderboardBtn = document.getElementById('resetLeaderboardBtn');
-  let resetLbConfirmPending = false;
-  let resetLbConfirmTimeout = null;
-  resetLeaderboardBtn.addEventListener('click', () => {
-    if (!resetLbConfirmPending) {
-      resetLbConfirmPending = true;
-      resetLeaderboardBtn.textContent = 'Click again to confirm reset';
-      resetLeaderboardBtn.classList.add('confirming');
-      resetLbConfirmTimeout = setTimeout(() => {
-        resetLbConfirmPending = false;
-        resetLeaderboardBtn.textContent = '⚠️ Reset All Leaderboards';
-        resetLeaderboardBtn.classList.remove('confirming');
-      }, 4000);
-      return;
-    }
-    clearTimeout(resetLbConfirmTimeout);
-    resetLbConfirmPending = false;
-    resetLeaderboardBtn.textContent = '⚠️ Reset All Leaderboards';
-    resetLeaderboardBtn.classList.remove('confirming');
-    resetAllLeaderboards();
-  });
 
   const lbTabScore = document.getElementById('lbTabScore');
   const lbTabTime = document.getElementById('lbTabTime');
